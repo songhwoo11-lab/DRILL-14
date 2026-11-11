@@ -2,9 +2,11 @@ from pico2d import *
 import game_world
 import game_framework
 from boy import Boy
+from eagle import create_flock
 from grass import Grass
 
 boy = None
+eagles = []
 
 
 def handle_events():
@@ -22,13 +24,17 @@ def handle_events():
 
 
 def init():
-    global boy
+    global boy, eagles
 
+    eagles = create_flock(get_canvas_width(), get_canvas_height())
     boy = Boy()
     game_world.add_oject(boy)
 
     grass = Grass()
     game_world.add_oject(grass, 0)
+
+    for eagle in eagles:
+        game_world.add_oject(eagle)
 
 
 def pause():
@@ -40,9 +46,10 @@ def resume():
 
 
 def finish():
-    global boy
+    global boy, eagles
     game_world.clear()
     boy = None
+    eagles = []
 
 
 def update():
@@ -52,7 +59,6 @@ def render():
     clear_canvas()
     game_world.render()
     update_canvas()
-
 
 
 
