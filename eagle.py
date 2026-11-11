@@ -40,6 +40,9 @@ EAGLE_MAX_WIDTH = (
 EAGLE_MAX_HEIGHT = (
     max(bottom - top for _, top, _, bottom in EAGLE_FRAME_BOUNDS) * EAGLE_SCALE
 )
+EAGLE_COUNT = 10
+FLOCK_COLUMNS = 5
+FLOCK_ROWS = (EAGLE_COUNT + FLOCK_COLUMNS - 1) // FLOCK_COLUMNS
 
 
 def frame_source_rect(frame_index):
@@ -128,3 +131,24 @@ class Eagle:
             source_width * EAGLE_SCALE,
             source_height * EAGLE_SCALE,
         )
+
+
+def create_flock(canvas_width, canvas_height):
+    if canvas_width <= 0 or canvas_height <= 0:
+        raise ValueError("canvas dimensions must be positive")
+
+    if canvas_width < EAGLE_MAX_WIDTH * FLOCK_COLUMNS:
+        raise ValueError("canvas is too narrow for a non-overlapping flock")
+    if canvas_height < EAGLE_MAX_HEIGHT * (FLOCK_ROWS + 1):
+        raise ValueError("canvas is too short for a non-overlapping flock")
+
+    half_width = EAGLE_MAX_WIDTH / 2
+    available_width = canvas_width - EAGLE_MAX_WIDTH
+
+    flock = []
+    for index in range(EAGLE_COUNT):
+        row, column = divmod(index, FLOCK_COLUMNS)
+        x = half_width + available_width * (column + 0.5) / FLOCK_COLUMNS
+        y = canvas_height * (row + 1) / (FLOCK_ROWS + 1)
+        flock.append(Eagle(x, y))
+    return flock

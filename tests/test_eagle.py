@@ -8,6 +8,7 @@ from eagle import (
     ANIMATION_CYCLE_SECONDS,
     EAGLE_FRAME_BOUNDS,
     EAGLE_FRAME_COUNT,
+    EAGLE_COUNT,
     EAGLE_MAX_HEIGHT,
     EAGLE_MAX_WIDTH,
     Eagle,
@@ -18,6 +19,7 @@ from eagle import (
     METERS_PER_PIXEL,
     SPRITE_SHEET_HEIGHT,
     SPRITE_SHEET_WIDTH,
+    create_flock,
     frame_source_rect,
 )
 
@@ -167,6 +169,47 @@ class FrameTimeTests(unittest.TestCase):
         self.assertEqual(len(observed_frame_times), 2)
         self.assertAlmostEqual(observed_frame_times[0], 0.02)
         self.assertAlmostEqual(observed_frame_times[1], 0.03)
+
+
+class EagleFlockTests(unittest.TestCase):
+    def setUp(self):
+        Eagle._sprite_sheet = Mock()
+
+    def tearDown(self):
+        Eagle._sprite_sheet = None
+
+    def test_flock_has_ten_independent_non_overlapping_eagles(self):
+        flock = create_flock(1600, 600)
+
+        self.assertEqual(len(flock), EAGLE_COUNT)
+        self.assertEqual(len({eagle.x for eagle in flock[:5]}), 5)
+        self.assertEqual(len({eagle.y for eagle in flock}), 2)
+        self.assertGreaterEqual(
+            min(eagle.x for eagle in flock), EAGLE_MAX_WIDTH / 2
+        )
+        self.assertLessEqual(
+            max(eagle.x for eagle in flock),
+            1600 - EAGLE_MAX_WIDTH / 2,
+        )
+        self.assertGreaterEqual(
+            min(eagle.y for eagle in flock), EAGLE_MAX_HEIGHT / 2
+        )
+        self.assertGreaterEqual(
+            abs(flock[0].x - flock[1].x), EAGLE_MAX_WIDTH
+        )
+        self.assertGreaterEqual(
+            abs(flock[0].y - flock[5].y), EAGLE_MAX_HEIGHT
+        )
+
+        flock[0].advance_animation(FRAME_INTERVAL_SECONDS)
+        self.assertEqual(flock[0].frame_index, 1)
+        self.assertTrue(all(eagle.frame_index == 0 for eagle in flock[1:]))
+
+    def test_flock_rejects_canvas_too_small_for_non_overlapping_layout(self):
+        with self.assertRaises(ValueError):
+            create_flock(400, 600)
+        with self.assertRaises(ValueError):
+            create_flock(1600, 200)
 
 
 if __name__ == "__main__":
