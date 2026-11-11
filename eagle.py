@@ -1,5 +1,10 @@
+import game_framework
+from pico2d import load_image
+
+
 SPRITE_SHEET_WIDTH = 918
 SPRITE_SHEET_HEIGHT = 506
+SPRITE_SHEET_PATH = "bird_animation.png"
 METERS_PER_PIXEL = 0.03
 PIXELS_PER_METER = 1.0 / METERS_PER_PIXEL
 FLIGHT_SPEED_KMPH = 60.0
@@ -7,6 +12,7 @@ FLIGHT_SPEED_MPS = FLIGHT_SPEED_KMPH * (1000.0 / 3600.0)
 FLIGHT_SPEED_PPS = FLIGHT_SPEED_MPS * PIXELS_PER_METER
 ANIMATION_CYCLE_DISTANCE_M = 7.0
 ANIMATION_CYCLE_DISTANCE_PX = ANIMATION_CYCLE_DISTANCE_M * PIXELS_PER_METER
+EAGLE_SCALE = 0.55
 
 # Frame bounds use top-left origin and an exclusive right/bottom edge.
 EAGLE_FRAME_BOUNDS = (
@@ -38,3 +44,51 @@ def frame_source_rect(frame_index):
         right - left,
         bottom - top,
     )
+
+
+class Eagle:
+    _sprite_sheet = None
+
+    def __init__(self, x, y, direction=1):
+        if direction not in (-1, 1):
+            raise ValueError("direction must be -1 or 1")
+        if Eagle._sprite_sheet is None:
+            Eagle._sprite_sheet = load_image(SPRITE_SHEET_PATH)
+
+        self.x = x
+        self.y = y
+        self.direction = direction
+        self.frame_index = 0
+        self.animation_elapsed = 0.0
+
+    def advance_animation(self, delta_time):
+        if delta_time < 0:
+            raise ValueError("delta_time cannot be negative")
+
+        self.animation_elapsed += delta_time
+        frames_advanced = int(
+            (self.animation_elapsed + 1e-12) / FRAME_INTERVAL_SECONDS
+        )
+        if frames_advanced:
+            self.frame_index = (
+                self.frame_index + frames_advanced
+            ) % EAGLE_FRAME_COUNT
+            self.animation_elapsed -= frames_advanced * FRAME_INTERVAL_SECONDS
+            self.animation_elapsed = max(0.0, self.animation_elapsed)
+
+    def update(self):
+        self.advance_animation(game_framework.frame_time)
+
+    def draw(self):
+        source_rect = frame_source_rect(self.frame_index)
+        source_width, source_height = source_rect[2:]
+        flip = "h" if self.direction == -1 else ""
+        Eagle._sprite_sheet.clip_composite_draw(
+            *source_rect,
+            0,
+            flip,
+            self.x,
+            self.y,
+            source_width * EAGLE_SCALE,
+            source_height * EAGLE_SCALE,
+        )

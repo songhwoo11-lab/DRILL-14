@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 from eagle import (
     ANIMATION_CYCLE_DISTANCE_M,
@@ -6,6 +7,7 @@ from eagle import (
     ANIMATION_CYCLE_SECONDS,
     EAGLE_FRAME_BOUNDS,
     EAGLE_FRAME_COUNT,
+    Eagle,
     FLIGHT_SPEED_KMPH,
     FLIGHT_SPEED_MPS,
     FLIGHT_SPEED_PPS,
@@ -48,6 +50,39 @@ class EagleMotionTests(unittest.TestCase):
             self.assertEqual(height, bottom - top)
             self.assertLessEqual(source_x + width, SPRITE_SHEET_WIDTH)
             self.assertLessEqual(source_y + height, SPRITE_SHEET_HEIGHT)
+
+
+class EagleAnimationTests(unittest.TestCase):
+    def setUp(self):
+        self.image = Mock()
+        Eagle._sprite_sheet = self.image
+        self.eagle = Eagle(120, 240)
+
+    def tearDown(self):
+        Eagle._sprite_sheet = None
+
+    def test_animation_advances_through_all_frames_and_loops(self):
+        self.eagle.advance_animation(FRAME_INTERVAL_SECONDS * 13)
+        self.assertEqual(self.eagle.frame_index, 13)
+
+        self.eagle.advance_animation(FRAME_INTERVAL_SECONDS)
+        self.assertEqual(self.eagle.frame_index, 0)
+
+    def test_zero_time_does_not_advance_and_negative_time_is_rejected(self):
+        self.eagle.advance_animation(0)
+        self.assertEqual(self.eagle.frame_index, 0)
+
+        with self.assertRaises(ValueError):
+            self.eagle.advance_animation(-0.01)
+
+    def test_draw_uses_frame_rectangle_and_direction_flip(self):
+        eagle = Eagle(120, 240, direction=-1)
+        eagle.draw()
+
+        args = self.image.clip_composite_draw.call_args.args
+        self.assertEqual(args[:4], frame_source_rect(0))
+        self.assertEqual(args[5], "h")
+        self.assertEqual(args[6:8], (120, 240))
 
 
 if __name__ == "__main__":
