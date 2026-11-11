@@ -209,6 +209,8 @@ class EagleFlockTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             create_flock(400, 600)
         with self.assertRaises(ValueError):
+            create_flock(550, 600)
+        with self.assertRaises(ValueError):
             create_flock(1600, 200)
 
 
@@ -245,7 +247,9 @@ class EagleFrameRateTests(unittest.TestCase):
         self.assertEqual(eagle.frame_index, 0)
         distance_pixels = eagle.x - 800
         distance_meters = distance_pixels * METERS_PER_PIXEL
-        self.assertAlmostEqual(distance_meters, ANIMATION_CYCLE_DISTANCE_M, places=8)
+        self.assertAlmostEqual(
+            distance_meters, ANIMATION_CYCLE_DISTANCE_M, places=8
+        )
 
 
 if __name__ == "__main__":
