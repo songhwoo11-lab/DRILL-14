@@ -1,6 +1,7 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
+import game_framework
 from eagle import (
     ANIMATION_CYCLE_DISTANCE_M,
     ANIMATION_CYCLE_DISTANCE_PX,
@@ -68,6 +69,14 @@ class EagleAnimationTests(unittest.TestCase):
         self.eagle.advance_animation(FRAME_INTERVAL_SECONDS)
         self.assertEqual(self.eagle.frame_index, 0)
 
+    def test_motion_uses_elapsed_seconds_and_facing_direction(self):
+        self.eagle.advance(1.0)
+        self.assertAlmostEqual(self.eagle.x, 120 + 555.5555556, places=6)
+
+        self.eagle.direction = -1
+        self.eagle.advance(0.5)
+        self.assertAlmostEqual(self.eagle.x, 120 + 555.5555556 - 277.7777778, places=6)
+
     def test_zero_time_does_not_advance_and_negative_time_is_rejected(self):
         self.eagle.advance_animation(0)
         self.assertEqual(self.eagle.frame_index, 0)
@@ -83,6 +92,42 @@ class EagleAnimationTests(unittest.TestCase):
         self.assertEqual(args[:4], frame_source_rect(0))
         self.assertEqual(args[5], "h")
         self.assertEqual(args[6:8], (120, 240))
+
+
+class FrameTimeTests(unittest.TestCase):
+    def test_game_loop_sets_delta_time_before_updating_mode(self):
+        observed_frame_times = []
+
+        class Mode:
+            event_count = 0
+
+            def init(self):
+                pass
+
+            def handle_events(self):
+                self.event_count += 1
+                if self.event_count == 2:
+                    game_framework.quit()
+
+            def update(self):
+                observed_frame_times.append(game_framework.frame_time)
+
+            def render(self):
+                pass
+
+            def finish(self):
+                pass
+
+        mode = Mode()
+        with patch(
+            "game_framework.time.perf_counter",
+            side_effect=(1.0, 1.02, 1.05),
+        ):
+            game_framework.run(mode)
+
+        self.assertEqual(len(observed_frame_times), 2)
+        self.assertAlmostEqual(observed_frame_times[0], 0.02)
+        self.assertAlmostEqual(observed_frame_times[1], 0.03)
 
 
 if __name__ == "__main__":

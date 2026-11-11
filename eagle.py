@@ -76,8 +76,12 @@ class Eagle:
             self.animation_elapsed -= frames_advanced * FRAME_INTERVAL_SECONDS
             self.animation_elapsed = max(0.0, self.animation_elapsed)
 
+    def advance(self, delta_time):
+        self.advance_animation(delta_time)
+        self.x += self.direction * FLIGHT_SPEED_PPS * delta_time
+
     def update(self):
-        self.advance_animation(game_framework.frame_time)
+        self.advance(game_framework.frame_time)
 
     def draw(self):
         source_rect = frame_source_rect(self.frame_index)
