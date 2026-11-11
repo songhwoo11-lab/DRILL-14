@@ -1,5 +1,5 @@
 import game_framework
-from pico2d import load_image
+from pico2d import get_canvas_height, get_canvas_width, load_image
 
 
 SPRITE_SHEET_WIDTH = 918
@@ -34,6 +34,12 @@ EAGLE_FRAME_BOUNDS = (
 EAGLE_FRAME_COUNT = len(EAGLE_FRAME_BOUNDS)
 ANIMATION_CYCLE_SECONDS = ANIMATION_CYCLE_DISTANCE_M / FLIGHT_SPEED_MPS
 FRAME_INTERVAL_SECONDS = ANIMATION_CYCLE_SECONDS / EAGLE_FRAME_COUNT
+EAGLE_MAX_WIDTH = (
+    max(right - left for left, _, right, _ in EAGLE_FRAME_BOUNDS) * EAGLE_SCALE
+)
+EAGLE_MAX_HEIGHT = (
+    max(bottom - top for _, top, _, bottom in EAGLE_FRAME_BOUNDS) * EAGLE_SCALE
+)
 
 
 def frame_source_rect(frame_index):
@@ -78,7 +84,33 @@ class Eagle:
 
     def advance(self, delta_time):
         self.advance_animation(delta_time)
-        self.x += self.direction * FLIGHT_SPEED_PPS * delta_time
+        self._advance_horizontal(FLIGHT_SPEED_PPS * delta_time, get_canvas_width())
+        canvas_height = get_canvas_height()
+        half_height = EAGLE_MAX_HEIGHT / 2
+        if canvas_height <= EAGLE_MAX_HEIGHT:
+            self.y = canvas_height / 2
+        else:
+            self.y = min(max(self.y, half_height), canvas_height - half_height)
+
+    def _advance_horizontal(self, distance, canvas_width):
+        half_width = EAGLE_MAX_WIDTH / 2
+        if canvas_width <= EAGLE_MAX_WIDTH:
+            self.x = canvas_width / 2
+            return
+
+        left_edge = half_width
+        right_edge = canvas_width - half_width
+        span = right_edge - left_edge
+        offset = min(max(self.x - left_edge, 0.0), span)
+        phase = offset if self.direction == 1 else 2 * span - offset
+        phase = (phase + distance) % (2 * span)
+
+        if phase < span:
+            self.x = left_edge + phase
+            self.direction = 1
+        else:
+            self.x = right_edge - (phase - span)
+            self.direction = -1
 
     def update(self):
         self.advance(game_framework.frame_time)

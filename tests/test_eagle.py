@@ -8,6 +8,8 @@ from eagle import (
     ANIMATION_CYCLE_SECONDS,
     EAGLE_FRAME_BOUNDS,
     EAGLE_FRAME_COUNT,
+    EAGLE_MAX_HEIGHT,
+    EAGLE_MAX_WIDTH,
     Eagle,
     FLIGHT_SPEED_KMPH,
     FLIGHT_SPEED_MPS,
@@ -70,12 +72,49 @@ class EagleAnimationTests(unittest.TestCase):
         self.assertEqual(self.eagle.frame_index, 0)
 
     def test_motion_uses_elapsed_seconds_and_facing_direction(self):
-        self.eagle.advance(1.0)
+        with patch("eagle.get_canvas_width", return_value=1600), patch(
+            "eagle.get_canvas_height", return_value=600
+        ):
+            self.eagle.advance(1.0)
         self.assertAlmostEqual(self.eagle.x, 120 + 555.5555556, places=6)
 
         self.eagle.direction = -1
-        self.eagle.advance(0.5)
+        with patch("eagle.get_canvas_width", return_value=1600), patch(
+            "eagle.get_canvas_height", return_value=600
+        ):
+            self.eagle.advance(0.5)
         self.assertAlmostEqual(self.eagle.x, 120 + 555.5555556 - 277.7777778, places=6)
+
+    def test_horizontal_motion_reflects_at_edges_and_stays_visible(self):
+        self.eagle.x = 100
+        with patch("eagle.get_canvas_width", return_value=200), patch(
+            "eagle.get_canvas_height", return_value=200
+        ):
+            self.eagle.advance(0.2)
+
+        self.assertEqual(self.eagle.direction, -1)
+        self.assertGreaterEqual(self.eagle.x, EAGLE_MAX_WIDTH / 2)
+        self.assertLessEqual(self.eagle.x, 200 - EAGLE_MAX_WIDTH / 2)
+
+    def test_large_delta_time_handles_multiple_edge_reflections(self):
+        self.eagle.x = 100
+        with patch("eagle.get_canvas_width", return_value=200), patch(
+            "eagle.get_canvas_height", return_value=200
+        ):
+            self.eagle.advance(2.0)
+
+        self.assertGreaterEqual(self.eagle.x, EAGLE_MAX_WIDTH / 2)
+        self.assertLessEqual(self.eagle.x, 200 - EAGLE_MAX_WIDTH / 2)
+        self.assertIn(self.eagle.direction, (-1, 1))
+
+    def test_vertical_position_is_clamped_to_canvas(self):
+        self.eagle.y = -10
+        with patch("eagle.get_canvas_width", return_value=1600), patch(
+            "eagle.get_canvas_height", return_value=100
+        ):
+            self.eagle.advance(0)
+
+        self.assertEqual(self.eagle.y, EAGLE_MAX_HEIGHT / 2)
 
     def test_zero_time_does_not_advance_and_negative_time_is_rejected(self):
         self.eagle.advance_animation(0)
