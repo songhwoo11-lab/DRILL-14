@@ -212,5 +212,41 @@ class EagleFlockTests(unittest.TestCase):
             create_flock(1600, 200)
 
 
+class EagleFrameRateTests(unittest.TestCase):
+    def setUp(self):
+        Eagle._sprite_sheet = Mock()
+
+    def tearDown(self):
+        Eagle._sprite_sheet = None
+
+    def test_motion_and_animation_are_consistent_at_multiple_frame_rates(self):
+        results = []
+        with patch("eagle.get_canvas_width", return_value=1600), patch(
+            "eagle.get_canvas_height", return_value=600
+        ):
+            for frame_rate in (30, 60, 144):
+                eagle = Eagle(800, 300)
+                delta_time = 1.0 / frame_rate
+                for _ in range(frame_rate):
+                    eagle.advance(delta_time)
+                results.append((eagle.x, eagle.frame_index))
+
+        for x, frame_index in results:
+            self.assertAlmostEqual(x, 800 + FLIGHT_SPEED_PPS, places=6)
+            self.assertEqual(frame_index, results[0][1])
+
+    def test_one_animation_cycle_moves_exactly_seven_meters(self):
+        with patch("eagle.get_canvas_width", return_value=1600), patch(
+            "eagle.get_canvas_height", return_value=600
+        ):
+            eagle = Eagle(800, 300)
+            eagle.advance(ANIMATION_CYCLE_SECONDS)
+
+        self.assertEqual(eagle.frame_index, 0)
+        distance_pixels = eagle.x - 800
+        distance_meters = distance_pixels * METERS_PER_PIXEL
+        self.assertAlmostEqual(distance_meters, ANIMATION_CYCLE_DISTANCE_M, places=8)
+
+
 if __name__ == "__main__":
     unittest.main()
